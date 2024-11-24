@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     with open(args.data_path, 'r') as f:
         molecules = f.readlines()
-        molecules = [smiles.atrip() for smiles in molecules]
+        molecules = [smiles.strip() for smiles in molecules]
 
     tokens = set()
 
@@ -31,5 +31,5 @@ if __name__ == "__main__":
     
     print('Saving tokenizer...')
     
-    with open(args.tokenizer_path, 'w') as f:
+    with open(os.path.join(args.tokenizer_path, args.tokenizer_name), 'w') as f:
         json.dump(id2token, f)

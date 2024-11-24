@@ -17,7 +17,7 @@ class CharTokenizer():
         
         # Add special tokens if necessary
         len_tokens = len(self.id2token)
-        tokens = self.id2tokens.values()
+        tokens = self.id2token.values()
         if '[PAD]' not in tokens:
             self.id2token[len_tokens] = '[PAD]'
             len_tokens += 1
@@ -40,6 +40,8 @@ class CharTokenizer():
         # Save (updated) tokenizer
         with open(tokenizer_path, 'w') as f:
             json.dump(self.id2token, f)
+        
+        self.token2id = {v: k for k, v in self.id2token.items()}
         
 
     @property
