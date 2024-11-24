@@ -5,17 +5,17 @@
     },
     "model": {
         "model_type": "gpt",
-        "n_layer": 4,
-        "n_query_head": 8,
-        "n_kv_head": 8,
+        "n_layer": 1,
+        "n_query_head": 4,
+        "n_kv_head": 4,
         "n_embd": 512,
         "rope": false,
         "pretrained_folder": null,
         "embd_pdrop": 0.1,
         "resid_pdrop": 0.1,
         "attn_pdrop": 0.1,
-        "vocab_size": 31,
-        "block_size": 50
+        "vocab_size": 512,
+        "block_size": 512
     },
     "trainer": {
         "device": "auto",

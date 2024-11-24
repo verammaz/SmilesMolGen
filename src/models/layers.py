@@ -123,7 +123,7 @@ class CausalSelfAttention(nn.Module):
         
         # calculate the attention scores with the query and key
         att = einsum(q, k, 'b h q d, b h k d -> b h q k') / scale
-        att = att.masked_fill(self.bias == 1, float('-inf'))
+        att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
         att = F.softmax(att, dim=-1)
         att_weights = self.attn_dropout(att)
         

@@ -29,8 +29,7 @@ import json
 from .layers import Block 
 
 # -----------------------------------------------------------------------------
-
-    
+ 
 
 class GPT(nn.Module):
     """ GPT Language Model """
@@ -40,9 +39,9 @@ class GPT(nn.Module):
         C = CN()
         # either model_type or (n_layer, n_head, n_embd) must be given in the config
         C.model_type = 'gpt'
-        C.n_layer=4
-        C.n_query_head=8
-        C.n_kv_head=8
+        C.n_layer=1
+        C.n_query_head=4
+        C.n_kv_head=4
         C.n_embd=512
         C.rope = False
         C.pretrained_folder = None

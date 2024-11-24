@@ -56,6 +56,8 @@ if __name__ == '__main__':
     # construct the model
     config.model.vocab_size = train_dataset.get_vocab_size()
     config.model.block_size = train_dataset.get_block_size()
+    config.model.block_size = 512
+    config.model.vocab_size = 512
     print(config)
     model = GPT(config.model)
     
