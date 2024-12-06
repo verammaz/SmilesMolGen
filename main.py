@@ -101,6 +101,8 @@ if __name__ == '__main__':
                 mol = mol[:end_idx+1]
                 smiles = tokenizer.decode(mol[1:-1])
                 print(f'\tSampled SMILES:  {smiles}')
+
+                wandb.log({"SMILES String": smiles})
             
             # save the latest model
             print("saving model...\n")
