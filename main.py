@@ -80,14 +80,14 @@ if __name__ == '__main__':
     # construct the trainer object
     trainer = Trainer(config.trainer, model, train_dataset)
     
-    #wandb.init(project="MolGen", config=config)
+    wandb.init(project="MolGen", config=config)
 
     # iteration callback
     def batch_end_callback(trainer):
-        #wandb.log({"n_examples" : trainer.n_examples, "train_loss": trainer.loss})
+        wandb.log({"n_examples" : trainer.n_examples, "train_loss": trainer.loss})
        
         if (trainer.n_iter + 1) % 200 == 0:
-            #wandb.log({"epoch": trainer.epoch, "train_loss": trainer.train_lossess[-1]})
+            wandb.log({"epoch": trainer.epoch, "train_loss": trainer.train_lossess[-1]})
             model.eval()
             with torch.no_grad():
                 # sample from the model...
