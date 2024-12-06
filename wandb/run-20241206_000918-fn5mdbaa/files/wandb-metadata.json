@@ -1,0 +1,39 @@
+{
+  "os": "macOS-15.1-arm64-arm-64bit",
+  "python": "3.12.2",
+  "startedAt": "2024-12-06T05:09:18.851882Z",
+  "program": "/Users/veramazeeva/Library/CloudStorage/OneDrive-Personal/Carnegie Mellon/GenAI/project/code/main.py",
+  "codePath": "main.py",
+  "git": {
+    "remote": "https://github.com/verammaz/SmilesMolGen.git",
+    "commit": "39aec2538cf75ba8291d305a054b710b1781d70c"
+  },
+  "email": "vmazeeva@andrew.cmu.edu",
+  "root": "/Users/veramazeeva/Library/CloudStorage/OneDrive-Personal/Carnegie Mellon/GenAI/project/code",
+  "host": "Veras-MacBook-Air-2.local",
+  "username": "veramazeeva",
+  "executable": "/opt/anaconda3/bin/python",
+  "codePathLocal": "main.py",
+  "cpu_count": 8,
+  "cpu_count_logical": 8,
+  "disk": {
+    "/": {
+      "total": "494384795648",
+      "used": "386845593600"
+    }
+  },
+  "memory": {
+    "total": "17179869184"
+  },
+  "cpu": {
+    "count": 8,
+    "countLogical": 8
+  },
+  "apple": {
+    "name": "Apple M2",
+    "ecpuCores": 4,
+    "pcpuCores": 4,
+    "gpuCores": 8,
+    "memoryGb": 16
+  }
+}

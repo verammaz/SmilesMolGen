@@ -28,7 +28,6 @@ class RotaryPositionalEmbeddings(nn.Module):
         self.cos_cache = torch.empty(0)
         self.sin_cache = torch.empty(0)
 
-    
 
     def _build_cache(self, x: torch.Tensor):
         """
@@ -62,9 +61,25 @@ class RotaryPositionalEmbeddings(nn.Module):
         # push to device
         self.cos_cache = self.cos_cache.to(x.device)
         self.sin_cache = self.sin_cache.to(x.device)
+    
+
+    def forward(self, x: torch.Tensor):
+       
+        b, h, t, n_embed = x.size()
+        
+        if self.cos_cache.numel() == 0 or self.cos_cache.size(0) != t:
+            self._build_cache(x)
+        
+        assert((n_embed % 2 == 0))
+
+        first_half = x[:, :, :, :n_embed//2] 
+        second_half = x[:, :, :, n_embed//2:]
+
+        return (x * self.cos_cache) + (torch.concat((-second_half, first_half), dim=-1) * self.sin_cache)
+        
 
 
-class CausalSelfAttention(nn.Module):
+class MultiHeadAttention(nn.Module):
     """
     A vanilla multi-head masked self-attention layer with a projection at the end.
     It is possible to use torch.nn.MultiheadAttention here but I am including an
@@ -90,16 +105,12 @@ class CausalSelfAttention(nn.Module):
         self.attn_dropout = nn.Dropout(config.attn_pdrop)
         self.resid_dropout = nn.Dropout(config.resid_pdrop)
 
-        # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
-                                     .view(1, 1, config.block_size, config.block_size))
-
         self.rope = config.rope
         if self.rope:
             self.ROPE = RotaryPositionalEmbeddings(self.n_embd // self.n_head)
 
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         q = self.query(x)
         k = self.key(x)
         v = self.value(x)
@@ -123,9 +134,12 @@ class CausalSelfAttention(nn.Module):
         
         # calculate the attention scores with the query and key
         att = einsum(q, k, 'b h q d, b h k d -> b h q k') / scale
-        att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
-        att = F.softmax(att, dim=-1)
-        att_weights = self.attn_dropout(att)
+
+        if mask is not None:
+            att = att.masked_fill(mask == 1, float('-inf'))
+        
+        att_weights = F.softmax(att, dim=-1)
+        att = self.attn_dropout(att_weights)
         
         # matrix multiplication of attention scores and value
         y = einsum(att, v, 'b h q t, b h t d -> b h q d')
@@ -173,16 +187,12 @@ class GroupedQueryAttention(nn.Module):
         self.attn_dropout = nn.Dropout(config.attn_pdrop)
         self.resid_dropout = nn.Dropout(config.resid_pdrop)
 
-        # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
-                                     .view(1, 1, config.block_size, config.block_size))
-        
         self.rope = config.rope
         if self.rope:
             self.ROPE = RotaryPositionalEmbeddings(self.head_dim)
             
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         q = self.query(x)
         k = self.key(x)
         v = self.value(x)
@@ -208,9 +218,11 @@ class GroupedQueryAttention(nn.Module):
         # calculate the attention scores with the query and  key
         att = einsum(q, k, 'b g h q d, b h k d -> b g h q k') / scale
 
-        att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
-        att = F.softmax(att, dim=-1)
-        att_weights = self.attn_dropout(att)
+        if mask is not None:
+            att = att.masked_fill(mask == 1, float('-inf'))
+        
+        att_weights = F.softmax(att, dim=-1)
+        att = self.attn_dropout(att_weights)
 
         # matrix multiplication of attention scores and value
         y = einsum(att, v, 'b g h q k, b h k d -> b g h q d')
@@ -234,7 +246,7 @@ class Block(nn.Module):
         if config.n_query_head != config.n_kv_head:
             self.attn = GroupedQueryAttention(config)
         else:
-            self.attn = CausalSelfAttention(config)
+            self.attn = MultiHeadAttention(config)
         self.ln_2 = nn.LayerNorm(config.n_embd)
         self.mlp = nn.ModuleDict(dict(
             c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd),
@@ -245,8 +257,8 @@ class Block(nn.Module):
         m = self.mlp
         self.mlpf = lambda x: m.dropout(m.c_proj(m.act(m.c_fc(x)))) # MLP forward
 
-    def forward(self, x):
-        attn_comp, attn_weights = self.attn(self.ln_1(x))
+    def forward(self, x, mask=None):
+        attn_comp, attn_weights = self.attn(self.ln_1(x), mask=mask)
         x = x + attn_comp
         y = x + self.mlpf(self.ln_2(x))
         return y

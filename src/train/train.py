@@ -1,6 +1,7 @@
 import os
 import torch
 from torch.utils.data.dataloader import DataLoader
+from collections import defaultdict
 from ..utils.utils import CfgNode as CN
 
 
@@ -12,7 +13,7 @@ class Trainer():
         # device to train on
         C.device = 'auto'
         # training parameters
-        C.epochs = 3
+        C.epochs = 1
         # dataloder parameters
         C.num_workers = 4
         # optimizer parameters
@@ -27,8 +28,10 @@ class Trainer():
     def __init__(self, config, model, dataset):
         self.config = config
         self.dataset = dataset
+        self.dataset_size = len(dataset)
         self.model = model
         self.optimizer = model.configure_optimizers(config)
+        self.callbacks = defaultdict(list)
 
         # determine the device we'll train on
         if config.device == 'auto':
@@ -38,7 +41,21 @@ class Trainer():
         self.model = self.model.to(self.device)
         print("running on device", self.device)
 
-    
+        self.n_examples = 0
+        self.n_iter = 0
+        self.epoch = 0
+
+    def add_callback(self, onevent: str, callback):
+        self.callbacks[onevent].append(callback)
+
+    def set_callback(self, onevent: str, callback):
+        self.callbacks[onevent] = [callback]
+
+    def trigger_callbacks(self, onevent: str):
+        for callback in self.callbacks.get(onevent, []):
+            callback(self)
+
+
     def run(self):
         model = self.model
         config = self.config
@@ -50,6 +67,7 @@ class Trainer():
                                 num_workers=config.num_workers,
                                 batch_size=config.batch_size)
         
+        
         model.train()
 
         for epoch in range(config.epochs):
@@ -60,13 +78,26 @@ class Trainer():
                 for k, v in encodings.items():
                     encodings[k] = v.to(self.device)
                 
-                loss, logits, *_ = self.model(**encodings)
-
-                loss.backward()
+                assert "labels" in encodings.keys()
+                
+                self.loss, logits, *_ = self.model(**encodings) 
+                model.zero_grad(set_to_none=True)
+                self.loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 self.optimizer.step()
+                
+                self.n_examples += dataloader.batch_size
 
+                self.trigger_callbacks('on_batch_end')
+                
+                
                 if batch % 200 == 0:
-                    print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {loss.item()}')
+                    print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {self.loss.item()}')
+                
+                self.n_iter += 1
 
+            self.n_epoch += 1
+            
+              
 
 
