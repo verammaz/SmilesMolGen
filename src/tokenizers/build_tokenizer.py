@@ -9,7 +9,7 @@ if __name__ == "__main__":
     parser.add_argument('-data_path', required=True, help='path to data file with smiles strings')
     parser.add_argument('-tokenizer_name', required=True, help='json filename for tokenizer')
     parser.add_argument('-tokenizer_path', default='./data/tokenizers', help='path to tokenizer json files')
-    parser.add_argument('-type', default='char', help='type of tokenization (currently only char supported)') # TODO: BPE tokenizer
+    #parser.add_argument('-type', default='char', help='type of tokenization (currently only char supported)') # TODO: BPE tokenizer
     
     args = parser.parse_args()
 
@@ -21,9 +21,8 @@ if __name__ == "__main__":
 
     print('Building tokenizer...')
 
-    if args.type == 'char':
-        for mol in molecules:
-            tokens |= set(mol)
+    for mol in molecules:
+        tokens |= set(mol)
     
     id2token = {}
     for i, token in enumerate(tokens):

@@ -33,7 +33,7 @@ class RotaryPositionalEmbeddings(nn.Module):
         """
         Build a cache for efficient computation of the rotary embeddings.
         """
-    
+        #print(f'RoPE input size: {x.size()}')
         b, h, t, n_embd = x.size() # batch, n_heads, seq_len, embed_dim per head
 
         assert (self.d == n_embd)
@@ -61,13 +61,15 @@ class RotaryPositionalEmbeddings(nn.Module):
         # push to device
         self.cos_cache = self.cos_cache.to(x.device)
         self.sin_cache = self.sin_cache.to(x.device)
+
+        #print(f'sin matrix size: {self.sin_cache.size()}')
     
 
     def forward(self, x: torch.Tensor):
        
         b, h, t, n_embed = x.size()
         
-        if self.cos_cache.numel() == 0 or self.cos_cache.size(0) != t:
+        if self.cos_cache.numel() == 0 or self.cos_cache.size(1) != t:
             self._build_cache(x)
         
         assert((n_embed % 2 == 0))
@@ -75,7 +77,16 @@ class RotaryPositionalEmbeddings(nn.Module):
         first_half = x[:, :, :, :n_embed//2] 
         second_half = x[:, :, :, n_embed//2:]
 
-        return (x * self.cos_cache) + (torch.concat((-second_half, first_half), dim=-1) * self.sin_cache)
+        cos_matrix = self.cos_cache
+        sin_matrix = self.sin_cache
+
+        if self.cos_cache.size(0) != h:
+          assert (self.cos_cache.size(0) > h) # cos_cache.size(0) = num_query_heads, h = num_kv_heads
+          cos_matrix = self.cos_cache[:h, :, :]
+          sin_matrix = self.sin_cache[:h, :, :]
+
+        #print(f'x shape: {x.size()}, cos shape: {self.cos_cache.size()}, sin shape: {self.sin_cache.size()}')
+        return (x * cos_matrix) + (torch.concat((-second_half, first_half), dim=-1) * sin_matrix)
         
 
 
@@ -219,6 +230,13 @@ class GroupedQueryAttention(nn.Module):
         att = einsum(q, k, 'b g h q d, b h k d -> b g h q k') / scale
 
         if mask is not None:
+            # Unsqueeze to add dimensions for group size (G) and heads per group (H)
+            mask = mask.unsqueeze(1)  # Shape: (64, 1, 1, 86, 86)
+
+            # Expand to match attention tensor (att) shape
+            mask = mask.expand(-1, att.size(1), att.size(2), -1, -1)  # (64, 2, 4, 86, 86)
+
+            # Apply the mask
             att = att.masked_fill(mask == 1, float('-inf'))
         
         att_weights = F.softmax(att, dim=-1)

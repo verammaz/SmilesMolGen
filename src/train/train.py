@@ -8,7 +8,7 @@ from ..utils.utils import CfgNode as CN
 class Trainer():
 
     @staticmethod
-    def get_default_config():
+    def get_default_config(model_type):
         C = CN()
         # device to train on
         C.device = 'auto'
@@ -23,6 +23,12 @@ class Trainer():
         C.betas = (0.9, 0.95)
         C.weight_decay = 0.1 # only applied on matmul weights
         C.grad_norm_clip = 1.0
+
+        if model_type == 'gpt':
+            C.tokenizer_path = 'data/tokenizers/gdb13FullCharTokenizer.json'
+            C.dataset_path = 'data/gdb13/gdb13_rand1m.smi'
+            C.dataname = 'gdb13'
+
         return C
     
     def __init__(self, config, model, dataset):
@@ -43,7 +49,7 @@ class Trainer():
 
         self.n_examples = 0
         self.n_iter = 0
-        self.epoch = 0
+        self.n_epoch = 0
 
     def add_callback(self, onevent: str, callback):
         self.callbacks[onevent].append(callback)
@@ -61,7 +67,8 @@ class Trainer():
         config = self.config
 
         dataloader = DataLoader(self.dataset,
-                                sampler=torch.utils.data.RandomSampler(self.dataset, replacement=True, num_samples=int(1e10)),
+                                sampler=torch.utils.data.RandomSampler(self.dataset, replacement=True, num_samples=int(1e10)), 
+                                        # TODO : is this sampling strategy appropriate?
                                 shuffle=False,
                                 pin_memory=True,
                                 num_workers=config.num_workers,

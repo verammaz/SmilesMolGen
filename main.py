@@ -34,8 +34,11 @@ def get_config():
     # model
     C.model = GPT.get_default_config()
 
-    # trainer
-    C.trainer = Trainer.get_default_config()
+    # trainers
+    C.gpt_trainer = Trainer.get_default_config('gpt')
+    C.predictor_trainer = Trainer.get_default_config('predictor')
+
+
 
     return C
 
@@ -55,10 +58,10 @@ if __name__ == '__main__':
     else : config.model.name += '.pt'
 
     # get training dataset (hardcoded for now)
-    tokenizer = CharTokenizer(tokenizer_path='data/tokenizers/gdb13FullCharTokenizer.json')
-    max_smiles_len = get_max_smiles_len('data/gdb13/gdb13_rand1m_50.smi') + 50
+    tokenizer = CharTokenizer(tokenizer_path=config.gpt_trainer.tokenizer_path)
+    max_smiles_len = get_max_smiles_len(config.gpt_trainer.dataset_path) + 50
     
-    train_dataset = get_dataset(data_path='data/gdb13/gdb13_rand1m_50.smi',
+    train_dataset = get_dataset(data_path=config.gpt_trainer.dataset_path,
                           tokenizer=tokenizer,
                           max_len=max_smiles_len)
 
@@ -84,6 +87,7 @@ if __name__ == '__main__':
 
     # iteration callback
     def batch_end_callback(trainer):
+        
         wandb.log({"n_examples" : trainer.n_examples, "train_loss": trainer.loss})
        
         if (trainer.n_iter + 1) % 200 == 0:
@@ -105,7 +109,12 @@ if __name__ == '__main__':
             
             # save the latest model
             print("saving model...\n")
-            ckpt_path = os.path.join(config.system.work_dir, config.model.name)
+
+            out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
+
+            os.makedirs(out_dir)
+
+            ckpt_path = os.path.join(out_dir, config.model.name)
             torch.save(model.state_dict(), ckpt_path)
         
             # revert model to training mode
