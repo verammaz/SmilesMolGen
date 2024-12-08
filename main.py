@@ -81,7 +81,7 @@ if __name__ == '__main__':
     setup_logging(config)
 
     # construct the trainer object
-    trainer = Trainer(config.trainer, model, train_dataset)
+    trainer = Trainer(config.gpt_trainer, model, train_dataset)
     
     wandb.init(project="MolGen", config=config)
 
