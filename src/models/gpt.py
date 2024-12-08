@@ -23,7 +23,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from ..utils.utils import CfgNode as CN
+from ..utils.data_utils import CfgNode as CN
 
 import time
 import os
