@@ -17,7 +17,6 @@ class Trainer():
         # dataloder parameters
         C.num_workers = 4
         # optimizer parameters
-        C.max_iters = 600
         C.batch_size = 64
         C.learning_rate = 3e-4
         C.betas = (0.9, 0.95)
@@ -67,13 +66,19 @@ class Trainer():
         model = self.model
         config = self.config
 
-        dataloader = DataLoader(self.dataset,
+        """dataloader = DataLoader(self.dataset,
                                 sampler=torch.utils.data.RandomSampler(self.dataset, replacement=True, num_samples=int(1e10)), 
                                         # TODO : is this sampling strategy appropriate?
                                 shuffle=False,
                                 pin_memory=True,
                                 num_workers=config.num_workers,
-                                batch_size=config.batch_size)
+                                batch_size=config.batch_size)"""
+        
+        dataloader = torch.utils.data.DataLoader(self.dataset,
+                                                 shuffle=True,
+                                                 batch_size=config.batch_size,
+                                                 num_workers=config.num_workers,
+                                                 pin_memory=True)
         
         
         model.train()
