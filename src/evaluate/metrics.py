@@ -4,13 +4,14 @@ import sys
 import pandas as pd
 import numpy as np
 
-import sascorer
 
 from rdkit import Chem
 from rdkit.Chem import QED, Crippen, Descriptors
 from rdkit import RDConfig
-from rdkit import RDLogger
+sys.path.append(os.path.join(RDConfig.RDContribDir, 'SA_Score'))
+import sascorer
 
+from rdkit import RDLogger
 # Suppress RDKit warnings
 RDLogger.DisableLog('rdApp.*')
 
@@ -57,7 +58,6 @@ def calc_sas(molecules):
         return sascores
     except Exception:
         return None
-
 
 
 def calc_ic50(molecules):

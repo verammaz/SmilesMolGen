@@ -41,24 +41,51 @@ def generate_smiles(model,
     return gen_smiles
 
 
-def get_statistics(generated_smiles, train_smiles, properties=['QED', 'LogP', 'IC50'], save=True, save_path=None):
+def get_statistics(generated_smiles, train_smiles, properties=['QED', 'SAS', 'LogP', 'IC50', 'MolWT'], save=True, save_path=None):
     stats = {}
-    valid_smiles = filter_valid_molecules(generate_smiles)
+    
+    print('Filtering valid SMILES...')
+    valid_smiles = filter_valid_molecules(generated_smiles)
+    
+    print('Calculating validity...')
     val = calc_validity(valid_smiles, generated_smiles)
+    
+    print('Calculating novelty...')
     nov = calc_novelty(valid_smiles, train_smiles)
+    
+    print('Calculating diversity')
     div = calc_diversity(valid_smiles)
+    
     stats["Validity"] = val
     stats["Novelty"] = nov
     stats["Diversity"] = div
+
+    molecules = convert_smiles_to_mol(valid_smiles)
     for property in properties:
         scores = []
+
         if property == 'QED':
-            scores = calc_qed(valid_smiles)
+            print('Calculating qed...')
+            scores = calc_qed(molecules)
+        
         elif property == 'LogP':
-            scores = calc_logp(valid_smiles, predictor=None)
+            print('Calculating logp...')
+            scores = calc_logp(molecules, predictor=None)
+
         elif property == 'IC50':
-            scores = calc_ic50(valid_smiles)
-        stats[property]= f'{np.mean(scores)} ± {np.std(scores)}'
+            print('Calculating ic50...')
+            scores = calc_ic50(molecules)
+
+        elif property == 'SAS':
+            print('Calculating sas...')
+            scores = calc_sas(molecules)
+        
+        elif property == 'MolWT':
+            print('Calculating mol weights...')
+            scores = calc_mw(molecules)
+
+        if scores is not None:
+            stats[property]= {"mean": np.mean(scores), "std": np.std(scores)}
     
     if save and save_path is not None:
         with open(save_path, 'w') as f:

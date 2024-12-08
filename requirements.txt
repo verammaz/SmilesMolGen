@@ -5,5 +5,4 @@ einops
 rdkit
 tqdm
 moses
-sascorer
 
