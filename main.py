@@ -16,6 +16,8 @@ from src.utils.data_utils import get_max_smiles_len
 from src.models.gpt import GPT
 from src.train.train import Trainer
 
+from src.evaluate.evaluate import generate_smiles, get_statistics
+
 import pickle
 
 wandb.login()
@@ -30,6 +32,12 @@ def get_config():
     C.system = CN()
     C.system.seed = 3407
     C.system.work_dir = './out'
+
+    # pipeline
+    C.pipeline = CN()
+    C.pipeline.train_gpt = True
+    C.pipeline.train_predictor = False
+    C.pipeline.evaluate = True
 
     # model
     C.model = GPT.get_default_config()
@@ -80,50 +88,56 @@ if __name__ == '__main__':
     
     #setup_logging(config)
 
-    # construct the trainer object
-    trainer = Trainer(config.gpt_trainer, model, train_dataset)
-    
-    wandb.init(project="MolGen", config=config)
+    if config.pipeline.train_gpt:
+        # construct the trainer object
+        trainer = Trainer(config.gpt_trainer, model, train_dataset)
+        
+        wandb.init(project="MolGen", config=config)
 
-    # iteration callback
-    def batch_end_callback(trainer):
-        
-        wandb.log({"n_examples" : trainer.n_examples, "train_loss": trainer.loss})
-        
         out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
-        ckpt_path = os.path.join(out_dir, config.model.name)
-        os.makedirs(out_dir, exist_ok=True)
 
-        best_loss = np.inf
-        
-        if (trainer.n_iter + 1) % 200 == 0:
-            model.eval()
-            with torch.no_grad():
-                if config.gpt_trainer.sample: 
-                    # sample from the model...
-                    tokens = model.sample([tokenizer.bos_token_id], 1, device=trainer.device)
-                    tokens = tokens.tolist()
-                    mol = tokens[0]
-                    try:   
-                        end_idx = mol.index(tokenizer.eos_token_id)
-                    except ValueError:
-                        end_idx = len(mol)
-                    mol = mol[:end_idx+1]
-                    smiles = tokenizer.decode(mol[1:-1])
-                    print(f'\tSampled SMILES:  {smiles}')
-
-                    #wandb.log({"SMILES String": smiles})
+        # iteration callback
+        def batch_end_callback(trainer):
             
-            # save the best model
-            """if trainer.loss_improved:
-                print("Loss decreased. Saving model...\n")
-                """
-            torch.save(model.state_dict(), ckpt_path)
-        
-            # revert model to training mode
-            model.train()
+            wandb.log({"n_examples" : trainer.n_examples, "train_loss": trainer.loss})
+            
+            ckpt_path = os.path.join(out_dir, f'{config.model.name}_preRL')
+            os.makedirs(out_dir, exist_ok=True)
 
-    trainer.set_callback('on_batch_end', batch_end_callback)
+            if (trainer.n_iter + 1) % 200 == 0:
+                model.eval()
+                with torch.no_grad():
+                    if config.gpt_trainer.sample: 
+                        # sample from the model...
+                        tokens = model.sample([tokenizer.bos_token_id], 1, device=trainer.device)
+                        tokens = tokens.tolist()
+                        mol = tokens[0]
+                        try:   
+                            end_idx = mol.index(tokenizer.eos_token_id)
+                        except ValueError:
+                            end_idx = len(mol)
+                        mol = mol[:end_idx+1]
+                        smiles = tokenizer.decode(mol[1:-1])
+                        print(f'\tSampled SMILES:  {smiles}')
 
-    # run the optimization
-    trainer.run()
+                        #wandb.log({"SMILES String": smiles})
+                
+                # save the best model
+                """if trainer.loss_improved:
+                    print("Loss decreased. Saving model...\n")
+                    """
+                torch.save(model.state_dict(), ckpt_path)
+            
+                # revert model to training mode
+                model.train()
+
+        trainer.set_callback('on_batch_end', batch_end_callback)
+
+        # run the optimization
+        trainer.run()
+
+    # evaluate
+    if config.pipeline.evaluate:
+        generated_smiles = generate_smiles(model, tokenizer)
+        stats_filename = 'preRL'
+        stats = get_statistics(generated_smiles, train_dataset._molecules, properties=["QED"], save_path=os.path.join(out_dir, stats_filename))

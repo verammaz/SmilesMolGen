@@ -63,6 +63,7 @@ class Trainer():
     def trigger_callbacks(self, onevent: str):
         for callback in self.callbacks.get(onevent, []):
             callback(self)
+            
 
 
     def run(self):

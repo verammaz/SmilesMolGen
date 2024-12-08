@@ -218,7 +218,7 @@ class GPT(nn.Module):
 
 
     @torch.no_grad()
-    def sample(self, start_token, size, temprature=1, max_len=100, device=torch.device('cuda')):
+    def sample(self, start_token, size, temperature=1, max_len=100, device=torch.device('cuda')):
         x = torch.tensor([start_token] * size, dtype=torch.long).to(device) 
         
         for k in trange(max_len, leave=False, desc="Sampling SMILES"):
@@ -228,7 +228,7 @@ class GPT(nn.Module):
             if isinstance(logits, tuple):
                 logits = logits[0]
 
-            logits = logits[:, -1, :] / temprature
+            logits = logits[:, -1, :] / temperature
             probs = F.softmax(logits, dim=-1)
             idxs = torch.multinomial(probs, num_samples=1)
 
