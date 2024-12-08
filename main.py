@@ -2,6 +2,7 @@ import wandb
 import os
 import sys
 import json
+import numpy as np
 
 import torch
 from torch.utils.data import Dataset
@@ -93,6 +94,8 @@ if __name__ == '__main__':
         out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
         ckpt_path = os.path.join(out_dir, config.model.name)
         os.makedirs(out_dir, exist_ok=True)
+
+        best_loss = np.inf
         
         if (trainer.n_iter + 1) % 200 == 0:
             model.eval()
@@ -112,8 +115,9 @@ if __name__ == '__main__':
 
                     #wandb.log({"SMILES String": smiles})
             
-            # save the latest model
-            if trainer.loss_improved:
+            # save the best model
+            if trainer.loss.item() < best_loss:
+                best_loss = trainer.loss.item()
                 print("Loss decreased. Saving model...\n")
                 torch.save(model.state_dict(), ckpt_path)
         

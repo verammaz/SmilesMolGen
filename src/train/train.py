@@ -104,12 +104,6 @@ class Trainer():
                 
                 self.n_examples += dataloader.batch_size
 
-                if self.loss.item() < self.best_loss:
-                    self.loss_improved = True
-                    self.best_loss = self.loss.item()
-                
-                else: self.loss_improved = False
-
                 self.trigger_callbacks('on_batch_end')
                 
                 
