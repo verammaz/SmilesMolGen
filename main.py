@@ -82,19 +82,18 @@ if __name__ == '__main__':
     print(config)
     model = GPT(config.model)
     
-    if config.model.pretrained_folder!=None:
-        assert os.path.normpath(os.path.abspath(config.model.pretrained_folder)) != os.path.normpath(os.path.abspath(config.system.work_dir)), "pretrained folder cannot be same as current folder. Change the folder name of your pretrained model or current directory using flags"
-        model.load_pretrained(config.model.pretrained_folder)
+    if config.model.pretrained != None:
+        pretrained_state_dict = torch.load(config.model.pretrained)
+        model.load_state_dict(pretrained_state_dict, strict=False) 
     
     #setup_logging(config)
+    out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
 
     if config.pipeline.train_gpt:
         # construct the trainer object
         trainer = Trainer(config.gpt_trainer, model, train_dataset)
         
         wandb.init(project="MolGen", config=config)
-
-        out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
 
         # iteration callback
         def batch_end_callback(trainer):
@@ -139,5 +138,5 @@ if __name__ == '__main__':
     # evaluate
     if config.pipeline.evaluate:
         generated_smiles = generate_smiles(model, tokenizer)
-        stats_filename = 'preRL'
+        stats_filename = 'stats_preRL.json'
         stats = get_statistics(generated_smiles, train_dataset._molecules, properties=["QED"], save_path=os.path.join(out_dir, stats_filename))

@@ -6,7 +6,7 @@ import rdkit
 import json
 from tqdm import trange
 
-from metrics import *
+from .metrics import *
 
 def generate_smiles(model,
                     tokenizer,
@@ -25,7 +25,7 @@ def generate_smiles(model,
     batch_size = batch_size if size > batch_size else size
 
     
-    for batch in trange(batches):
+    for batch in range(batches):
         tokens = model.sample([tokenizer.bos_token_id], batch_size, temprature, max_len, device)
         tokens = tokens.tolist()
 
@@ -45,19 +45,24 @@ def get_statistics(generated_smiles, train_smiles, properties=['QED', 'LogP', 'I
     stats = {}
     val = calc_validity(generated_smiles)
     nov = calc_novelty(generated_smiles, train_smiles)
-    div = calc_diversity(generated_smiles, train_smiles)
-    stats["Validity"] = {"mean": np.mean(val), "std": np.std(val), "max": np.max(val), "min": np.min(val)}
+    div = calc_diversity(generated_smiles)
+    stats["Validity"] = val
     stats["Novelty"] = nov
     stats["Diversity"] = div
     for property in properties:
-        scores = []
+        stats[property] = dict()
+        scores_train, scores_gen = []
         if property == 'QED':
-            scores = calc_qed(generate_smiles)
+            scores_gen = calc_qed(generated_smiles)
+            scores_train = calc_qed(train_smiles)
         elif property == 'LogP':
-            scores = calc_logp(generate_smiles, predictor=None)
+            scores_gen = calc_logp(generated_smiles, predictor=None)
+            scores_train = calc_logp(train_smiles)
         elif property == 'IC50':
-            scores = calc_ic50(generate_smiles)
-        stats[property] = {"mean": np.mean(scores), "std": np.std(scores), "max": np.max(scores), "min": np.min(scores)}
+            scores_gen = calc_ic50(generated_smiles)
+            scores_train = calc_ic50(train_smiles)
+        stats[property]["generated"] = {"mean": np.mean(scores_gen), "std": np.std(scores_gen), "max": np.max(scores_gen), "min": np.min(scores_gen)}
+        stats[property]["train"] = {"mean": np.mean(scores_train), "std": np.std(scores_train), "max": np.max(scores_train), "min": np.min(scores_train)}
     
     if save and save_path is not None:
         with open(save_path, 'w') as f:

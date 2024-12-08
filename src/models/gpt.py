@@ -51,7 +51,7 @@ class GPT(nn.Module):
         C.block_size=512
         C.vocab_size=512
         C.rope = False
-        C.pretrained_folder = None
+        C.pretrained = None
         # dropout hyperparameters
         C.embd_pdrop = 0.1
         C.resid_pdrop = 0.1
@@ -221,7 +221,7 @@ class GPT(nn.Module):
     def sample(self, start_token, size, temperature=1, max_len=100, device=torch.device('cuda')):
         x = torch.tensor([start_token] * size, dtype=torch.long).to(device) 
         
-        for k in trange(max_len, leave=False, desc="Sampling SMILES"):
+        for k in trange(max_len, leave=True, desc="Sampling SMILES"):
             with torch.no_grad():
                 logits = self.forward(x)
 
