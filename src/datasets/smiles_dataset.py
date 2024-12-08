@@ -1,6 +1,7 @@
 # Source : https://github.com/eyalmazuz/MolGen/blob/master/MolGen/src/datasets/smiles_dataset.py
 
 from random import sample
+import pandas as pd
 
 from rdkit import Chem
 import torch
@@ -27,10 +28,13 @@ class SmilesDataset(Dataset):
         return self._molecules
         
     def load_molecules(self):
-        molecules = []
-        with open(self.data_path, 'r') as f:
+        df = pd.read_csv(self.data_path)
+        smiles = df['smiles'].to_list()
+        molecules = [mol.strip() for mol in smiles]
+
+        """with open(self.data_path, 'r') as f:
             molecules = f.readlines()
-            molecules = [smiles.strip() for smiles in molecules]
+            molecules = [smiles.strip() for smiles in molecules]"""
         return molecules
 
     def __len__(self):

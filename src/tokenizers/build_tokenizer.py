@@ -1,5 +1,6 @@
 import argparse
 from tqdm import tqdm
+import pandas as pd
 import os
 import json
 
@@ -13,16 +14,20 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    with open(args.data_path, 'r') as f:
+    df = pd.read_csv(args.data_path)
+
+    smiles = df['smiles'].to_list()
+
+    """with open(args.data_path, 'r') as f:
         molecules = f.readlines()
         molecules = [smiles.strip() for smiles in molecules]
-
+"""
     tokens = set()
 
     print('Building tokenizer...')
 
-    for mol in molecules:
-        tokens |= set(mol)
+    for mol in smiles:
+        tokens |= set(mol.strip())
     
     id2token = {}
     for i, token in enumerate(tokens):
