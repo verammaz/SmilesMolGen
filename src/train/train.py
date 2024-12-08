@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from torch.utils.data.dataloader import DataLoader
 from collections import defaultdict
-from ..utils.data_utils import CfgNode as CN
+from ..utils.general_utils import CfgNode as CN
 
 
 class Trainer():
