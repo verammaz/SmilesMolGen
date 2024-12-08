@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 from torch.utils.data.dataloader import DataLoader
 from collections import defaultdict
 from ..utils.utils import CfgNode as CN
@@ -50,6 +51,8 @@ class Trainer():
         self.n_examples = 0
         self.n_iter = 0
         self.n_epoch = 0
+        self.best_loss = np.inf
+        self.loss_improved = False
 
     def add_callback(self, onevent: str, callback):
         self.callbacks[onevent].append(callback)
@@ -100,6 +103,10 @@ class Trainer():
                 self.optimizer.step()
                 
                 self.n_examples += dataloader.batch_size
+
+                if self.loss < self.best_loss:
+                    self.loss_improved = True
+                    self.best_loss = self.loss
 
                 self.trigger_callbacks('on_batch_end')
                 

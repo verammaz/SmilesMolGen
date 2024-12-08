@@ -78,7 +78,7 @@ if __name__ == '__main__':
         assert os.path.normpath(os.path.abspath(config.model.pretrained_folder)) != os.path.normpath(os.path.abspath(config.system.work_dir)), "pretrained folder cannot be same as current folder. Change the folder name of your pretrained model or current directory using flags"
         model.load_pretrained(config.model.pretrained_folder)
     
-    setup_logging(config)
+    #setup_logging(config)
 
     # construct the trainer object
     trainer = Trainer(config.gpt_trainer, model, train_dataset)
@@ -89,7 +89,11 @@ if __name__ == '__main__':
     def batch_end_callback(trainer):
         
         wandb.log({"n_examples" : trainer.n_examples, "train_loss": trainer.loss})
-       
+        
+        out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
+        ckpt_path = os.path.join(out_dir, config.model.name)
+        os.makedirs(out_dir, exist_ok=True)
+        
         if (trainer.n_iter + 1) % 200 == 0:
             model.eval()
             with torch.no_grad():
@@ -109,14 +113,9 @@ if __name__ == '__main__':
                     #wandb.log({"SMILES String": smiles})
             
             # save the latest model
-            print("saving model...\n")
-
-            out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
-
-            os.makedirs(out_dir, exist_ok=True)
-
-            ckpt_path = os.path.join(out_dir, config.model.name)
-            torch.save(model.state_dict(), ckpt_path)
+            if trainer.loss_improved:
+                print("Loss decreased. Saving model...\n")
+                torch.save(model.state_dict(), ckpt_path)
         
             # revert model to training mode
             model.train()
