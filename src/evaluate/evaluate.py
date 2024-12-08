@@ -43,26 +43,22 @@ def generate_smiles(model,
 
 def get_statistics(generated_smiles, train_smiles, properties=['QED', 'LogP', 'IC50'], save=True, save_path=None):
     stats = {}
-    val = calc_validity(generated_smiles)
-    nov = calc_novelty(generated_smiles, train_smiles)
-    div = calc_diversity(generated_smiles)
+    valid_smiles = filter_valid_molecules(generate_smiles)
+    val = calc_validity(valid_smiles, generated_smiles)
+    nov = calc_novelty(valid_smiles, train_smiles)
+    div = calc_diversity(valid_smiles)
     stats["Validity"] = val
     stats["Novelty"] = nov
     stats["Diversity"] = div
     for property in properties:
-        stats[property] = dict()
-        scores_train, scores_gen = []
+        scores = []
         if property == 'QED':
-            scores_gen = calc_qed(generated_smiles)
-            scores_train = calc_qed(train_smiles)
+            scores = calc_qed(valid_smiles)
         elif property == 'LogP':
-            scores_gen = calc_logp(generated_smiles, predictor=None)
-            scores_train = calc_logp(train_smiles)
+            scores = calc_logp(valid_smiles, predictor=None)
         elif property == 'IC50':
-            scores_gen = calc_ic50(generated_smiles)
-            scores_train = calc_ic50(train_smiles)
-        stats[property]["generated"] = {"mean": np.mean(scores_gen), "std": np.std(scores_gen), "max": np.max(scores_gen), "min": np.min(scores_gen)}
-        stats[property]["train"] = {"mean": np.mean(scores_train), "std": np.std(scores_train), "max": np.max(scores_train), "min": np.min(scores_train)}
+            scores = calc_ic50(valid_smiles)
+        stats[property]= f'{np.mean(scores)} ± {np.std(scores)}'
     
     if save and save_path is not None:
         with open(save_path, 'w') as f:
