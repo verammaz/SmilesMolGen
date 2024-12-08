@@ -2,7 +2,6 @@ import wandb
 import os
 import sys
 import json
-import numpy as np
 
 import torch
 from torch.utils.data import Dataset
@@ -116,10 +115,10 @@ if __name__ == '__main__':
                     #wandb.log({"SMILES String": smiles})
             
             # save the best model
-            if trainer.loss.item() < best_loss:
-                best_loss = trainer.loss.item()
+            """if trainer.loss_improved:
                 print("Loss decreased. Saving model...\n")
-                torch.save(model.state_dict(), ckpt_path)
+                """
+            torch.save(model.state_dict(), ckpt_path)
         
             # revert model to training mode
             model.train()
