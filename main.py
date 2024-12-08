@@ -69,7 +69,7 @@ if __name__ == '__main__':
     # construct the model
     config.model.vocab_size = tokenizer.vocab_size
     config.model.block_size = train_dataset.get_block_size()
-    config.model.block_size = 512
+    #config.model.block_size = 512
     
     print(config)
     model = GPT(config.model)
@@ -93,26 +93,27 @@ if __name__ == '__main__':
         if (trainer.n_iter + 1) % 200 == 0:
             model.eval()
             with torch.no_grad():
-                # sample from the model...
-                tokens = model.sample([tokenizer.bos_token_id], 1, device=trainer.device)
-                tokens = tokens.tolist()
-                mol = tokens[0]
-                try:   
-                    end_idx = mol.index(tokenizer.eos_token_id)
-                except ValueError:
-                    end_idx = len(mol)
-                mol = mol[:end_idx+1]
-                smiles = tokenizer.decode(mol[1:-1])
-                print(f'\tSampled SMILES:  {smiles}')
+                if config.gpt_trainer.sample: 
+                    # sample from the model...
+                    tokens = model.sample([tokenizer.bos_token_id], 1, device=trainer.device)
+                    tokens = tokens.tolist()
+                    mol = tokens[0]
+                    try:   
+                        end_idx = mol.index(tokenizer.eos_token_id)
+                    except ValueError:
+                        end_idx = len(mol)
+                    mol = mol[:end_idx+1]
+                    smiles = tokenizer.decode(mol[1:-1])
+                    print(f'\tSampled SMILES:  {smiles}')
 
-                wandb.log({"SMILES String": smiles})
+                    #wandb.log({"SMILES String": smiles})
             
             # save the latest model
             print("saving model...\n")
 
             out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
 
-            os.makedirs(out_dir)
+            os.makedirs(out_dir, exist_ok=True)
 
             ckpt_path = os.path.join(out_dir, config.model.name)
             torch.save(model.state_dict(), ckpt_path)

@@ -28,6 +28,7 @@ class Trainer():
             C.tokenizer_path = 'data/tokenizers/gdb13FullCharTokenizer.json'
             C.dataset_path = 'data/gdb13/gdb13_rand1m.smi'
             C.dataname = 'gdb13'
+            C.sample = False
 
         return C
     
