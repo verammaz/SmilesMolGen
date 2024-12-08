@@ -7,14 +7,14 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 
-from src.models.gpt import GPT
-from src.train.train import Trainer
-from src.utils.utils import set_seed, setup_logging, CfgNode as CN
+from src.utils import set_seed, setup_logging, CfgNode as CN
 
 from src.tokenizers.CharTokenizer import CharTokenizer
-
 from src.datasets.get_dataset import get_dataset
 from src.utils.utils import get_max_smiles_len
+
+from src.models.gpt import GPT
+from src.train.train import Trainer
 
 import pickle
 

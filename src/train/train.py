@@ -25,7 +25,7 @@ class Trainer():
         C.grad_norm_clip = 1.0
 
         if model_type == 'gpt':
-            C.tokenizer_path = 'data/tokenizers/gdb13FullCharTokenizer.json'
+            C.tokenizer_path = 'data/tokenizers/gdb13CharTokenizer.json'
             C.dataset_path = 'data/gdb13/gdb13_rand1m.smi'
             C.dataname = 'gdb13'
             C.sample = False
@@ -104,9 +104,11 @@ class Trainer():
                 
                 self.n_examples += dataloader.batch_size
 
-                if self.loss < self.best_loss:
+                if self.loss.item() < self.best_loss:
                     self.loss_improved = True
-                    self.best_loss = self.loss
+                    self.best_loss = self.loss.item()
+                
+                else: self.loss_improved = False
 
                 self.trigger_callbacks('on_batch_end')
                 

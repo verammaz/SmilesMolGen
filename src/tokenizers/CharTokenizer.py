@@ -5,7 +5,7 @@ import sys
 
 class CharTokenizer():
 
-    def __init__(self, tokenizer_path='./tokenizers/', dataset='gdb13'):
+    def __init__(self, tokenizer_path):
         try:
             with open(tokenizer_path, 'r') as f:
                 print('Loading existing tokenizer...')

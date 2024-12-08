@@ -4,5 +4,6 @@ numpy
 einops
 rdkit
 tqdm
+moses
 
 
