@@ -5,11 +5,14 @@ from torch.utils.data.dataloader import DataLoader
 from collections import defaultdict
 from ..utils.general_utils import CfgNode as CN
 
+from .rewards import *
+from ..evaluate.evaluate import generate_smiles
 
-class Trainer():
+
+class Reinforcer():
 
     @staticmethod
-    def get_default_config():
+    def get_default_config(properties=None):
         C = CN()
         # device to train on
         C.device = 'auto'
@@ -23,19 +26,18 @@ class Trainer():
         C.betas = (0.9, 0.95)
         C.weight_decay = 0.1 # only applied on matmul weights
         C.grad_norm_clip = 1.0
-        # data for training
-        C.tokenizer_path = 'data/tokenizers/gdb13CharTokenizer.json'
-        C.dataset_path = 'data/gdb13/gdb13_rand1m.smi'
-        C.dataname = 'gdb13'
-        C.sample = False
+
+        C.reward_fn = get_reward_fn(properties)
+        C.target_property = properties
 
         return C
     
-    def __init__(self, config, model, dataset):
+    def __init__(self, config, model, dataset, tokenizer):
         self.config = config
         self.dataset = dataset
         self.dataset_size = len(dataset)
         self.model = model
+        self.tokenizer = tokenizer
         self.optimizer = model.configure_optimizers(config)
         self.callbacks = defaultdict(list)
 
@@ -45,13 +47,12 @@ class Trainer():
         else:
             self.device = config.device
         self.model = self.model.to(self.device)
-        print("Train", self.device)
+        print("Reinforce", self.device)
 
         self.n_examples = 0
         self.n_iter = 0
         self.n_epoch = 0
-        self.best_loss = np.inf
-        self.loss_improved = False
+     
 
     def add_callback(self, onevent: str, callback):
         self.callbacks[onevent].append(callback)
@@ -62,20 +63,11 @@ class Trainer():
     def trigger_callbacks(self, onevent: str):
         for callback in self.callbacks.get(onevent, []):
             callback(self)
-            
-
+    
 
     def run(self):
         model = self.model
         config = self.config
-
-        """dataloader = DataLoader(self.dataset,
-                                sampler=torch.utils.data.RandomSampler(self.dataset, replacement=True, num_samples=int(1e10)), 
-                                        # TODO : is this sampling strategy appropriate?
-                                shuffle=False,
-                                pin_memory=True,
-                                num_workers=config.num_workers,
-                                batch_size=config.batch_size)"""
         
         dataloader = torch.utils.data.DataLoader(self.dataset,
                                                  shuffle=True,
@@ -87,40 +79,30 @@ class Trainer():
         model.train()
 
         for epoch in range(config.epochs):
-
             for batch, encodings in enumerate(dataloader):
-                self.optimizer.zero_grad()
 
                 for k, v in encodings.items():
                     encodings[k] = v.to(self.device)
                 
-                assert "labels" in encodings.keys()
-                
-                self.loss, logits, *_ = self.model(**encodings) 
-                model.zero_grad(set_to_none=True)
-                self.loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                self.optimizer.step()
-                
-                self.n_examples += dataloader.batch_size
+                    assert "labels" in encodings.keys()
+                    
+                    self.loss, logits, *_ = self.model(**encodings) 
+                    generated_smiles = generate_smiles(model, self.tokenizer, batch_size=dataloader.batch_size)
+                    rewards = config.reward_fn(generated_smiles, device=config.device)
+                    self.adj_loss = self.loss - rewards.mean()
+                    model.zero_grad(set_to_none=True)
+                    self.adj_loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    self.optimizer.step()
+                    
+                    self.n_examples += dataloader.batch_size
+                    self.reward = rewards.mean()
 
-                """if self.loss.item() < self.best_loss:
-                    self.loss_improved = True
-                    self.best_loss = self.loss.item()
-                
-                else: 
-                    self.loss_improved = False"""
+                    # Print progress
+                    if batch % 200 == 0:
+                        valid_smiles = sum(rewards).item()
+                        print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {self.loss.item()}, valid SMILES: {valid_smiles}/{len(rewards)}')
+                    
+                    self.n_iter += 1
 
-                self.trigger_callbacks('on_batch_end')
-                
-                
-                if batch % 200 == 0:
-                    print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {self.loss.item()}')
-                
-                self.n_iter += 1
-
-            self.n_epoch += 1
-            
-              
-
-
+                self.n_epoch += 1

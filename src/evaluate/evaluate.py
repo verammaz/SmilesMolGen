@@ -41,7 +41,7 @@ def generate_smiles(model,
     return gen_smiles
 
 
-def get_statistics(generated_smiles, train_smiles, properties=['QED', 'SAS', 'LogP', 'IC50', 'MolWT'], save=True, save_path=None):
+def get_statistics(generated_smiles, train_smiles, properties=['QED', 'SAS', 'LogP', 'MolWT'], save=True, save_path=None):
     stats = {}
     
     print('Filtering valid SMILES...')
@@ -71,10 +71,6 @@ def get_statistics(generated_smiles, train_smiles, properties=['QED', 'SAS', 'Lo
         elif property == 'LogP':
             print('Calculating logp...')
             scores = calc_logp(molecules, predictor=None)
-
-        elif property == 'IC50':
-            print('Calculating ic50...')
-            scores = calc_ic50(molecules)
 
         elif property == 'SAS':
             print('Calculating sas...')

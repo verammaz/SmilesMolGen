@@ -56,18 +56,4 @@ class SmilesDataset(Dataset):
     def get_block_size(self):
         return self.max_len
 
-def main():
 
-    dataset = SmilesDataset('/Users/veramazeeva/Library/CloudStorage/OneDrive-Personal/Carnegie Mellon/GenAI/project/code/data/gdb13/gdb13_rand1m.smi',
-                                 '/Users/veramazeeva/Library/CloudStorage/OneDrive-Personal/Carnegie Mellon/GenAI/project/code/data/tokenizers/gdb13CharTokenizer.json')
-
-    smiles = 'CCO'
-    
-    encoding = dataset.tokenizer.encode(smiles)
-    print(encoding)
-    rec_smiles = dataset.tokenizer.decode(encoding)
-    print(rec_smiles)
-    print(rec_smiles == smiles)
-
-if __name__ == "__main__":
-    main()

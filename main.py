@@ -15,6 +15,7 @@ from src.utils.data_utils import get_max_smiles_len
 
 from src.models.gpt import GPT
 from src.train.train import Trainer
+from src.reinforcement.reinforce import Reinforcer
 
 from src.evaluate.evaluate import generate_smiles, get_statistics
 
@@ -36,17 +37,15 @@ def get_config():
     # pipeline
     C.pipeline = CN()
     C.pipeline.train_gpt = True
-    C.pipeline.train_predictor = False
     C.pipeline.evaluate = True
+    C.pipeline.reinforce = True
 
     # model
     C.model = GPT.get_default_config()
 
     # trainers
-    C.gpt_trainer = Trainer.get_default_config('gpt')
-    C.predictor_trainer = Trainer.get_default_config('predictor')
-
-
+    C.gpt_trainer = Trainer.get_default_config()
+    C.reinforcer = Reinforcer.get_default_config()
 
     return C
 
@@ -62,10 +61,8 @@ if __name__ == '__main__':
 
     config.model.name = f'{config.model.model_type}_{config.model.n_layer}_{config.model.n_query_head}_{config.model.n_kv_head}'
 
-    if config.model.rope : config.model.name += '_rope.pt'
-    else : config.model.name += '.pt'
+    if config.model.rope : config.model.name += '_rope'
 
-    # get training dataset (hardcoded for now)
     tokenizer = CharTokenizer(tokenizer_path=config.gpt_trainer.tokenizer_path)
     max_smiles_len = get_max_smiles_len(config.gpt_trainer.dataset_path) + 50
     
@@ -88,19 +85,18 @@ if __name__ == '__main__':
     
     #setup_logging(config)
     out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
+    wandb.init(project="MolGen", config=config)
 
     if config.pipeline.train_gpt:
         # construct the trainer object
         trainer = Trainer(config.gpt_trainer, model, train_dataset)
-        
-        wandb.init(project="MolGen", config=config)
 
         # iteration callback
-        def batch_end_callback(trainer):
+        def batch_end_trainer_callback(trainer):
             
             wandb.log({"n_examples" : trainer.n_examples, "train_loss": trainer.loss})
             
-            ckpt_path = os.path.join(out_dir, f'{config.model.name}_preRL')
+            ckpt_path = os.path.join(out_dir, f'{config.model.name}_preRL.pt')
             os.makedirs(out_dir, exist_ok=True)
 
             if (trainer.n_iter + 1) % 200 == 0:
@@ -119,18 +115,12 @@ if __name__ == '__main__':
                         smiles = tokenizer.decode(mol[1:-1])
                         print(f'\tSampled SMILES:  {smiles}')
 
-                        #wandb.log({"SMILES String": smiles})
-                
-                # save the best model
-                """if trainer.loss_improved:
-                    print("Loss decreased. Saving model...\n")
-                    """
                 torch.save(model.state_dict(), ckpt_path)
             
                 # revert model to training mode
                 model.train()
 
-        trainer.set_callback('on_batch_end', batch_end_callback)
+        trainer.set_callback('on_batch_end', batch_end_trainer_callback)
 
         # run the optimization
         trainer.run()
@@ -138,5 +128,28 @@ if __name__ == '__main__':
     # evaluate
     if config.pipeline.evaluate:
         generated_smiles = generate_smiles(model, tokenizer)
-        stats_filename = config.model.name[:-3] + '_stats_preRL.json'
+        stats_filename = config.model.name + '_stats_preRL.json'
         stats = get_statistics(generated_smiles, train_dataset._molecules, save_path=os.path.join(out_dir, stats_filename))
+
+
+    if config.pipeline.reinforce:
+        reinforcer = Reinforcer(config.reinforcer, model, train_dataset, tokenizer)
+        # iteration callback
+        def batch_end_rl_callback(reinforcer):
+            
+            wandb.log({"n_examples" : reinforcer.n_examples,   
+                       "reward": reinforcer.reward,
+                       "rl_adj_loss": reinforcer.adj_loss})
+            
+            ckpt_path = os.path.join(out_dir, f'{config.model.name}_RL_{reinforcer.config.target_property}.pt')
+            os.makedirs(out_dir, exist_ok=True)
+
+            if (reinforcer.n_iter + 1) % 200 == 0:
+                model.eval()
+                torch.save(model.state_dict(), ckpt_path)
+                model.train()
+
+        reinforcer.set_callback('on_batch_end', batch_end_rl_callback)
+
+        # run the optimization
+        reinforcer.run()
