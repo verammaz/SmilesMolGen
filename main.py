@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
     # evaluate
     if config.pipeline.evaluate:
-        generated_smiles = generate_smiles(model, tokenizer)
+        generated_smiles, _ = generate_smiles(model, tokenizer)
         stats_filename = config.model.name + '_stats_preRL.json'
         stats = get_statistics(generated_smiles, train_dataset._molecules, save_path=os.path.join(out_dir, stats_filename))
 

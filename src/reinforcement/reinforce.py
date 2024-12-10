@@ -50,7 +50,9 @@ class Reinforcer():
         else:
             self.device = config.device
         self.model = self.model.to(self.device)
+
         print("Reinforce", self.device)
+        print("Target Property", config.target_property)
 
         self.n_examples = 0
         self.n_iter = 0
@@ -66,18 +68,15 @@ class Reinforcer():
     def trigger_callbacks(self, onevent: str):
         for callback in self.callbacks.get(onevent, []):
             callback(self)
-    
-    def compute_discounted_returns(self, rewards, discount_factor):
-        """Compute discounted rewards for the batch."""
-        discounted_returns = []
-        for reward_seq in rewards:
-            seq_len = len(reward_seq)
-            discounted = torch.zeros(seq_len, device=self.device)
-            cumulative = 0.0
-            for t in reversed(range(seq_len)):
-                cumulative = reward_seq[t] + discount_factor * cumulative
-                discounted[t] = cumulative
-            discounted_returns.append(discounted)
+
+
+    def compute_discounted_returns(rewards, discount_factor, device='cuda'):
+        T = rewards.size(1)
+        discounts = torch.pow(discount_factor, torch.arange(T, device=device))
+        discounted_returns = torch.flip(
+            torch.cumsum(torch.flip(rewards * discounts, dims=[1]), dim=1),
+            dims=[1]
+        )
         return discounted_returns
 
 
@@ -89,63 +88,57 @@ class Reinforcer():
       
 
       model.train()
-      batch_size = config.batch_size // 50
+      batch_size = config.batch_size
 
       for epoch in range(config.epochs):
+        
         for batch in range(config.steps_per_epoch):
-            loss = 0
-            total_rewards = 0
 
             # Generate SMILES and compute rewards
             generated_smiles, generated_tokens = generate_smiles(
                 model, self.tokenizer, batch_size=batch_size, size=100, 
                 device=self.device, verb=False
             )
-            rewards = reward_fn(generated_smiles, device=self.device)
 
-            self.n_iter += 1
+            rewards = reward_fn(generated_smiles, device=self.device) # [batch_size]
+            rewards.unsqueeze(1) # [batch_size, 1]
+            self.reward = rewards.mean().item()
 
-            # Inline computation of policy gradient loss
-            for tokens, reward in zip(generated_tokens, rewards):
-                # Compute discounted returns
-                discounted_returns = (
-                    torch.pow(config.discount_factor, torch.arange(len(tokens[:-1]), 0, -1, device=self.device)) 
-                    * reward
-                )
+            # Convert generated tokens to tensors
+            input_ids = torch.tensor(
+                [tokens[:-1] for tokens in generated_tokens], dtype=torch.long, device=self.device
+            )
+            target_ids = torch.tensor(
+                [tokens[1:] for tokens in generated_tokens], dtype=torch.long, device=self.device
+            )
+            
+            # Compute logits and log probabilities
+            logits = model(input_ids)
+            log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
 
-                # Prepare input and target tokens
-                input_ids = torch.tensor([tokens[:-1]], dtype=torch.long).to(self.device)
-                target_ids = torch.tensor([tokens[1:]], dtype=torch.long).to(self.device)
+            # Gather log probabilities of the generated tokens
+            idxs = target_ids.unsqueeze(-1)
+            action_values = log_probs.gather(dim=2, index=idxs).squeeze(-1)
 
-                # Compute model logits and log probabilities
-                logits = model(input_ids)
-                if isinstance(logits, tuple):
-                    logits = logits[0]
+            # Compute discounted returns for the entire batch
+            discounted_returns = self.compute_discounted_returns(rewards, config.discount_factor, device=self.device)
 
-                log_preds = torch.nn.functional.log_softmax(logits, dim=-1)
-                idxs = target_ids.unsqueeze(-1)
-                action_values = log_preds.gather(dim=2, index=idxs).squeeze(-1)
+            # Mask padding tokens if needed (optional, for padding tokens in fixed length)
+            if self.tokenizer.pad_token_id is not None:
+                mask = target_ids != self.tokenizer.pad_token_id
+                action_values = action_values * mask
 
-                # Compute policy gradient loss for this sequence
-                sequence_loss = -torch.sum(action_values * discounted_returns)
-                loss += sequence_loss
-
-                # Track rewards
-                total_rewards += reward.item()
-
-              
+            # Compute loss
+            self.loss = -torch.sum(action_values * discounted_returns) / config.batch_size
 
             # Backpropagation
-            self.loss = loss / batch_size
-            self.reward = total_rewards / batch_size
-
             self.optimizer.zero_grad()
             self.loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_norm_clip)
             self.optimizer.step()
 
             # Logging
             if batch % 200 == 0:
-                print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {self.loss.item():.4f}, avg reward: {self.reward:.2f}')
+                print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {self.loss.item():.4f}, avg reward: {avg_reward:.2f}')
 
         self.n_epoch += 1
