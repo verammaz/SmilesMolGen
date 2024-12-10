@@ -155,6 +155,6 @@ if __name__ == '__main__':
 
         # evaluate after rL
         if config.pipeline.evaluate:
-            generated_smiles = generate_smiles(model, tokenizer)
+            generated_smiles, _ = generate_smiles(model, tokenizer)
             stats_filename = config.model.name + f'_stats_RL_{reinforcer.config.target_property}.json'
             stats = get_statistics(generated_smiles, train_dataset._molecules, save_path=os.path.join(out_dir, stats_filename))
