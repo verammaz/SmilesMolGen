@@ -131,15 +131,14 @@ if __name__ == '__main__':
         stats_filename = config.model.name + '_stats_preRL.json'
         stats = get_statistics(generated_smiles, train_dataset._molecules, save_path=os.path.join(out_dir, stats_filename))
 
-
     if config.pipeline.reinforce:
         reinforcer = Reinforcer(config.reinforcer, model, train_dataset, tokenizer)
         # iteration callback
         def batch_end_rl_callback(reinforcer):
             
-            wandb.log({"n_examples" : reinforcer.n_examples,   
+            wandb.log({"n_iter" : reinforcer.n_iter,   
                        "reward": reinforcer.reward,
-                       "rl_adj_loss": reinforcer.adj_loss})
+                       "rl_loss": reinforcer.loss})
             
             ckpt_path = os.path.join(out_dir, f'{config.model.name}_RL_{reinforcer.config.target_property}.pt')
             os.makedirs(out_dir, exist_ok=True)

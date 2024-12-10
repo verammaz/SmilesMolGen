@@ -183,7 +183,7 @@ class GPT(nn.Module):
         look_ahead_mask = self.mask[:,:,:t, :t]
 
         if padding_mask is not None:
-            attn_mask = padding_mask.view(b, 1, 1, t)
+            attn_mask = padding_mask.view(b, 1, 1, t).to(device)
             mask = torch.maximum(look_ahead_mask, attn_mask)
         else:
             mask = look_ahead_mask
@@ -196,8 +196,8 @@ class GPT(nn.Module):
 
         # if we are given some desired targets also calculate the loss
         if labels is not None:
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            shift_logits = logits[..., :-1, :].contiguous().to(device)
+            shift_labels = labels[..., 1:].contiguous().to(device)
             loss_fn = nn.CrossEntropyLoss()
             loss = loss_fn(shift_logits.transpose(1, 2), shift_labels)
             return loss, logits
@@ -208,10 +208,10 @@ class GPT(nn.Module):
 
 
     @torch.no_grad()
-    def sample(self, start_token, size, temperature=1, max_len=100, device=torch.device('cuda')):
+    def sample(self, start_token, size, temperature=1, max_len=100, device=torch.device('cuda'), verb=True):
         x = torch.tensor([start_token] * size, dtype=torch.long).to(device) 
         
-        for k in trange(max_len, leave=True, desc="Sampling SMILES"):
+        for k in trange(max_len, leave=True, desc="Sampling SMILES", disable=not verb):
             with torch.no_grad():
                 logits = self.forward(x)
 

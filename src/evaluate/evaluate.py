@@ -14,19 +14,21 @@ def generate_smiles(model,
                     size=1000,
                     batch_size=100,
                     max_len=100,
-                    device=torch.device('cuda')):
+                    device=torch.device('cuda'), verb=True):
 
-    print(f'Evaluate {device}')
+    if verb: print(f'Evaluate {device}')
     model.to(device)
     model.eval()
     gen_smiles = []
+    gen_tokens = []
 
     batches = 1 if size // batch_size == 0 else size // batch_size
     batch_size = batch_size if size > batch_size else size
 
     
     for batch in range(batches):
-        tokens = model.sample([tokenizer.bos_token_id], batch_size, temprature, max_len, device)
+        tokens = model.sample([tokenizer.bos_token_id], batch_size, temprature, max_len, device, verb=verb)
+        
         tokens = tokens.tolist()
 
         for mol in tokens:
@@ -35,10 +37,12 @@ def generate_smiles(model,
             except ValueError:
                 end_idx = len(mol)
             mol = mol[:end_idx+1]
+            gen_tokens.append(mol)
             smiles = tokenizer.decode(mol[1:-1])
             gen_smiles.append(smiles)
 
-    return gen_smiles
+    model.train()
+    return gen_smiles, gen_tokens
 
 
 def get_statistics(generated_smiles, train_smiles, properties=['QED', 'SAS', 'LogP', 'MolWT'], save=True, save_path=None):
