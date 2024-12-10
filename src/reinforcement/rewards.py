@@ -104,4 +104,5 @@ def get_reward_fn(target):
         return logp_reward
     elif target in ['Validitiy', 'val']:
         return validity_reward
-    else: # by default, return validity + qed reward
+    else: # by default, return validity + qed + logp reward
+        return validity_qed_logp_reward
