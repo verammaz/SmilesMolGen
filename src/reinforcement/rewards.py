@@ -1,5 +1,6 @@
 import torch
 import rdkit
+import numpy as np
 from rdkit import Chem
 from rdkit.Chem import QED, Crippen, Descriptors
 from ..evaluate.metrics import *
@@ -31,12 +32,12 @@ def logp_reward(smiles_batch, device='cuda', ideal_range=(1.35, 1.8), max_logp=5
     rewards = []
     for mol in mols:
         if mol is None:
-            rewards.append(0.0)  # Invalid SMILES
+            rewards.append(0)  # Invalid SMILES
             continue
         
         logp = Descriptors.MolLogP(mol)
         if logp > max_logp:
-            rewards.append(0.0)  # Penalize logP > max_logp
+            rewards.append(-5.0)  # Penalize logP > max_logp
         elif lower_ideal <= logp <= upper_ideal:
             rewards.append(1.0)  # Reward logP in the ideal range
         else:
