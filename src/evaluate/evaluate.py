@@ -32,7 +32,7 @@ def generate_smiles(model,
         tokens = tokens.tolist()
 
         for mol in tokens:
-            assert len(mol) == max_len
+            assert len(mol) == max_len + 1
             gen_tokens.append(mol)
             try:
                 end_idx = mol.index(tokenizer.eos_token_id)

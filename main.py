@@ -80,7 +80,7 @@ if __name__ == '__main__':
     model = GPT(config.model)
     
     if config.model.pretrained != None:
-        pretrained_state_dict = torch.load(config.model.pretrained)
+        pretrained_state_dict = torch.load(config.model.pretrained, weights_only=True)
         model.load_state_dict(pretrained_state_dict, strict=False) 
     
     #setup_logging(config)

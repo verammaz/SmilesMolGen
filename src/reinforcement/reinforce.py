@@ -70,13 +70,12 @@ class Reinforcer():
             callback(self)
 
 
-    def compute_discounted_returns(rewards, discount_factor, device='cuda'):
-        T = rewards.size(1)
-        discounts = torch.pow(discount_factor, torch.arange(T, device=device))
-        discounted_returns = torch.flip(
-            torch.cumsum(torch.flip(rewards * discounts, dims=[1]), dim=1),
-            dims=[1]
-        )
+    def compute_discounted_returns(self, rewards, max_len, discount_factor):
+        # Broadcast single reward to sequence length
+        rewards = rewards.unsqueeze(1).expand(-1, max_len)  # Shape: [batch_size, max_len]
+
+        discounts = torch.pow(discount_factor, torch.arange(max_len, device=rewards.device))  # Shape: [max_len]
+        discounted_returns = rewards * discounts  # Shape: [batch_size, max_len]
         return discounted_returns
 
 
@@ -100,8 +99,8 @@ class Reinforcer():
                 device=self.device, verb=False
             )
 
+
             rewards = reward_fn(generated_smiles, device=self.device) # [batch_size]
-            rewards.unsqueeze(1) # [batch_size, 1]
             self.reward = rewards.mean().item()
 
             # Convert generated tokens to tensors
@@ -121,7 +120,7 @@ class Reinforcer():
             action_values = log_probs.gather(dim=2, index=idxs).squeeze(-1)
 
             # Compute discounted returns for the entire batch
-            discounted_returns = self.compute_discounted_returns(rewards, config.discount_factor, device=self.device)
+            discounted_returns = self.compute_discounted_returns(rewards, len(generated_tokens[0][:-1]), config.discount_factor)
 
             # Mask padding tokens if needed (optional, for padding tokens in fixed length)
             if self.tokenizer.pad_token_id is not None:
@@ -139,6 +138,9 @@ class Reinforcer():
 
             # Logging
             if batch % 200 == 0:
-                print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {self.loss.item():.4f}, avg reward: {avg_reward:.2f}')
+                print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {self.loss.item():.4f}, avg reward: {self.reward:.2f}')
 
+            self.n_iter += 1
+            self.trigger_callbacks('on_batch_end')
+            
         self.n_epoch += 1
