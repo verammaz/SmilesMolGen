@@ -32,11 +32,19 @@ class Reinforcer():
 
         C.target_property = 'Validity'
 
+        #reward fn parameters
+        C.qed_weight = 1.0
+        C.qed_mul = 1.0
+        C.validity_weight = 1.0
+        C.logp_weight = 1.0
+        C.ideal_range_logp = (1.35, 1.8)
+        C.max_logp = 5.0
+
         return C
     
     def __init__(self, config, model, dataset, tokenizer):
+
         self.config = config
-        self.reward_fn = get_reward_fn(config.target_property)
         self.dataset = dataset
         self.dataset_size = len(dataset)
         self.model = model
@@ -51,8 +59,19 @@ class Reinforcer():
             self.device = config.device
         self.model = self.model.to(self.device)
 
+        reward_params = {"qed_weight": config.qed_weight,
+                         "qed_mul": config.qed_mul,
+                         "validity_weight": config.validity_weight,
+                         "logp_weight": config.logp_weight,
+                         "ideal_range_logp": config.ideal_range_logp,
+                         "max_logp": config.max_logp}
+
+        self.reward_fn = get_reward_fn(config.target_property, self.device, **reward_params)
+
         print("Reinforce", self.device)
-        print("Target Property", config.target_property)
+
+        target_property = config.target_property if config.target_property not in ['All', 'all'] else 'QED+Validity+LogP'
+        print("Target:", target_property)
 
         self.n_examples = 0
         self.n_iter = 0

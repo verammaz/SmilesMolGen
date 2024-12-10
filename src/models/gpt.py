@@ -169,6 +169,7 @@ class GPT(nn.Module):
     def forward(self, input_ids, padding_mask=None, labels=None):
         device = input_ids.device
         b, t = input_ids.size()
+        #print(t, b, self.block_size)
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
         
         # forward the GPT model itself

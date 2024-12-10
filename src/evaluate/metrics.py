@@ -63,3 +63,28 @@ def calc_sas(molecules):
 def calc_ic50(molecules):
     pass
 
+def get_top_molecules(molecules, smiles, k, property):
+    scores = []
+    if property == 'qed':
+        scores = calc_qed(molecules)
+    elif property == 'logp':
+        scores = calc_logp(molecules)
+    elif property == 'sas':
+        scores = calc_sas(molecules)
+    elif property == 'mwt':
+        scores = calc_mw(molecules)
+    else:
+        [], [], []
+    
+    indices = np.argsort(scores)[-k:][::-1]
+
+    top_mols, top_smiles, top_scores = [], [], []
+
+    for id in indices:
+        top_mols.append(molecules[id])
+        top_smiles.append(smiles[id])
+        top_scores.append(scores[id])
+
+    return top_mols, top_smiles, top_scores
+
+

@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     # construct the model
     config.model.vocab_size = tokenizer.vocab_size
-    config.model.block_size = train_dataset.get_block_size()
+    config.model.block_size = train_dataset.get_block_size() + 100
     #config.model.block_size = 512
     
     print(config)
@@ -155,6 +155,6 @@ if __name__ == '__main__':
 
         # evaluate after rL
         if config.pipeline.evaluate:
-            generated_smiles, _ = generate_smiles(model, tokenizer)
+            generated_smiles = generate_smiles(model, tokenizer)
             stats_filename = config.model.name + f'_stats_RL_{reinforcer.config.target_property}.json'
             stats = get_statistics(generated_smiles, train_dataset._molecules, save_path=os.path.join(out_dir, stats_filename))

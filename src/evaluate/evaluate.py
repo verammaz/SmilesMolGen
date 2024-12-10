@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import rdkit
+from rdkit.Chem import Draw
 import json
 from tqdm import trange
 
@@ -98,4 +99,16 @@ def get_statistics(generated_smiles, train_smiles, properties=['QED', 'SAS', 'Lo
     return stats
 
 
+def save_top_molecules(generated_smiles, path=None, k=5, property='logp'):
+    valid_smiles = filter_valid_molecules(generated_smiles)
+    valid_mols = convert_smiles_to_mol(valid_smiles)
+    top_mols, top_smiles, top_scores = get_top_molecules(valid_mols, valid_smiles, k, property)
+    for mol, smi, score in zip(top_mols, top_smiles, top_scores):
+        
+        draw_molecule(mol, path=path, smiles_str=smi, property=property, score=score)
 
+
+def draw_molecule(mol, path=None, smiles_str=None, property=None, score=None):
+    caption = f"SMILES: {smiles_str}\n{property}: {score:.2f}"
+    img = Draw.MolToImage(mol, legend=caption)
+    img.save(path)
