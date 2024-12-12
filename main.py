@@ -37,8 +37,9 @@ def get_config():
     # pipeline
     C.pipeline = CN()
     C.pipeline.train_gpt = True
-    C.pipeline.evaluate = True
+    C.pipeline.evaluate_pre = True
     C.pipeline.reinforce = True
+    C.pipeline.evaluate_post = True
 
     # model
     C.model = GPT.get_default_config()
@@ -126,7 +127,7 @@ if __name__ == '__main__':
         trainer.run()
 
     # evaluate
-    if config.pipeline.evaluate:
+    if config.pipeline.evaluate_pre:
         generated_smiles, _ = generate_smiles(model, tokenizer)
         stats_filename = config.model.name + '_stats_preRL.json'
         stats = get_statistics(generated_smiles, train_dataset._molecules, save_path=os.path.join(out_dir, stats_filename))
@@ -154,7 +155,7 @@ if __name__ == '__main__':
         reinforcer.run()
 
         # evaluate after rL
-        if config.pipeline.evaluate:
+        if config.pipeline.evaluate_post:
             generated_smiles, _ = generate_smiles(model, tokenizer)
             stats_filename = config.model.name + f'_stats_RL_{reinforcer.config.target_property}.json'
             stats = get_statistics(generated_smiles, train_dataset._molecules, save_path=os.path.join(out_dir, stats_filename))
