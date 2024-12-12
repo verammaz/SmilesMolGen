@@ -115,7 +115,7 @@ class Reinforcer():
             # Generate SMILES and compute rewards
             generated_smiles, generated_tokens = generate_smiles(
                 model, self.tokenizer, batch_size=batch_size, size=100, 
-                device=self.device, verb=False
+                device=self.device, temperature=1.5, verb=False
             )
 
 
@@ -156,7 +156,7 @@ class Reinforcer():
             self.optimizer.step()
 
             # Logging
-            if batch % 200 == 0:
+            if batch % 20 == 0:
                 print(f'epoch: {epoch + 1}, batch: {batch + 1}, loss: {self.loss.item():.4f}, avg reward: {self.reward:.2f}')
 
             self.n_iter += 1
