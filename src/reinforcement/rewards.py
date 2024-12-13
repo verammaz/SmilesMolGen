@@ -16,8 +16,7 @@ def validity_reward(smiles_batch, device='cuda'):
 def qed_reward(smiles_batch, device='cuda', **kwargs):
     mul = kwargs['qed_mul']  # Default multiplier is 1
     mols = [Chem.MolFromSmiles(smiles_str) for smiles_str in smiles_batch]
-    rewards = [QED.qed(mol) if mol is not None else 0.0 for mol in mols]
-    rewards *= mul
+    rewards = [QED.qed(mol) * mul if mol is not None else 0.0 for mol in mols]
     return torch.tensor(rewards, dtype=torch.float32, device=device)
 
 

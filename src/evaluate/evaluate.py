@@ -15,6 +15,7 @@ def generate_smiles(model,
                     size=1000,
                     batch_size=100,
                     max_len=100,
+                    temperature=1.0,
                     device=torch.device('cuda'), verb=True):
 
     if verb: print(f'Evaluate {device}')
@@ -28,7 +29,7 @@ def generate_smiles(model,
 
     
     for batch in range(batches):
-        tokens = model.sample([tokenizer.bos_token_id], batch_size, temprature, max_len, device, verb=verb)
+        tokens = model.sample([tokenizer.bos_token_id], batch_size, temperature, max_len, device, verb=verb)
         
         tokens = tokens.tolist()
 

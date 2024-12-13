@@ -86,6 +86,8 @@ if __name__ == '__main__':
     
     #setup_logging(config)
     out_dir = os.path.join(config.system.work_dir, config.gpt_trainer.dataname)
+    os.makedirs(out_dir, exist_ok=True)
+
     wandb.init(project="MolGen", config=config)
 
     if config.pipeline.train_gpt:
@@ -98,7 +100,6 @@ if __name__ == '__main__':
             wandb.log({"n_examples" : trainer.n_examples, "train_loss": trainer.loss})
             
             ckpt_path = os.path.join(out_dir, f'{config.model.name}_preRL.pt')
-            os.makedirs(out_dir, exist_ok=True)
 
             if (trainer.n_iter + 1) % 200 == 0:
                 model.eval()
@@ -142,7 +143,6 @@ if __name__ == '__main__':
                        "rl_loss": reinforcer.loss})
             
             ckpt_path = os.path.join(out_dir, f'{config.model.name}_RL_{reinforcer.config.target_property}.pt')
-            os.makedirs(out_dir, exist_ok=True)
 
             if (reinforcer.n_iter + 1) % 200 == 0:
                 model.eval()
